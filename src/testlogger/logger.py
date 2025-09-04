@@ -1,11 +1,13 @@
 
 from datetime import datetime
 from functools import wraps
+import json
 import os
 from logging import Logger, Handler
 
 import logging
 import shutil
+from typing import Optional, Union
 
 from colored import Fore as fg
 from colored import Back as bg
@@ -30,11 +32,6 @@ levels = {
 # -- Reverse lookup ------------------------------------------- #
 levels_by_value = {v["level"]: k for k, v in levels.items()}
 
-
-
-class BlockAllFilter(logging.Filter):
-    def filter(self, record):
-        return False
 
 class ColorFormatter(logging.Formatter):
 
@@ -71,6 +68,40 @@ class ColorFormatter(logging.Formatter):
         # Wrap the entire line in color, then reset
         return f"{color}{formatted}{self.RESET}"
 
+class ProcedureFormater(logging.Formatter):
+
+    def __init__(self, fmt: str = None, datefmt: str = None, style='%'):
+        if fmt is None:
+            fmt = "[%(asctime)s] %(levelname)-8s %(message)s"
+
+        # Register custom levels
+        logging.addLevelName(levels['step']['level'], "STEP")
+        logging.addLevelName(levels['substep']['level'], "SUBSTEP")
+
+        super().__init__(fmt, datefmt, style)
+
+    def __get_level_by_value(self, target_level: int) -> tuple:
+        key = levels_by_value.get(target_level)
+        return (key, levels[key]) if key else (None, None)
+
+    def format(self, record):
+        # Get original formatted message
+        formatted = super().format(record)
+
+        # Get level info using reverse lookup
+        level_key, level_info = self.__get_level_by_value(record.levelno)
+
+        # Add indentation for substep
+        if level_key == "substep":
+            formatted = "   " + formatted
+
+        # Wrap the entire line in color, then reset
+        return formatted
+
+class StepOnlyFilter(logging.Filter):
+    """Filter that only allows step and substep log records through"""
+    def filter(self, record):
+        return record.levelno in [levels["step"]["level"], levels["substep"]["level"]]
 
 class TestLogger:
     
@@ -80,49 +111,16 @@ class TestLogger:
         *args,
         **kwargs
     ):
-        """
-            **kwargs:
-                - term_format
-                - setup_format
-                - term_config_loglevel
-                - term_setup_loglevel
-                - term_call_loglevel
-        """
         self.__logger : Logger = logging.getLogger( logger_name )
         self.__logger.setLevel(levels['info']['level'])
 
-        # -- Handler for the test call file ----------------------- #
-        self.__call_file_handler     : Handler = None
-        # -- Handler for the test setup file ---------------------- #
-        self.__setup_file_handler    : Handler = None
-        # -- Handler for the test prompt -------------------------- #
-        self.__term_handler          : Handler = None
-        # -- Handler for the steps file  -------------------------- #
-        self.__steps_file_handler    : Handler = None
-        # -- Handler for the combined log ------------------------- # 
-        self.__combined_file_handler : Handler = None
+        self.__active_handlers: dict[str, Handler] = {}
 
-
-        self.__term_format  : str = kwargs.get('log_term_format',  '[%(levelname)s%(step)s] - %(message)s')
-        self.__setup_format : str = kwargs.get('log_setup_format', '[%(levelname)s%(step)s] - %(message)s')
-        self.__call_format  : str = kwargs.get('log_setup_format', '[%(levelname)s%(step)s] - %(message)s')
-    
-
-        # ! The followign levels affect only to the term handler #
-        #   Every other entry is logged into the files always (for now)
-
-        # -- Applied during the test configuration ------------------ #
-        self.__term_config_loglevel : int = kwargs.get('term_config_loglevel', levels['info']["level"])
-        # -- Applied during the setup stage ------------------------ #
-        self.__term_setup_loglevel  : int = kwargs.get('term_setup_loglevel', levels['info']["level"])
-        # -- Applied during the call stage ------------------------- #
-        self.__term_call_loglevel   : int = kwargs.get('term_call_loglevel', levels['info']["level"])
-    
-        # -- Applied during the test configuration ------------------ #
-        self.__setup_file_loglevel : int = kwargs.get('setup_file_loglevel', levels['info']["level"])
-        # -- Applied during the setup stage ------------------------ #
-        self.__call_file_loglevel  : int = kwargs.get('call_file_loglevel', levels['info']["level"])
-
+        self.__test_procedure: dict = {
+            'test_id': "",
+            'description': "",
+            'steps': []
+        }
 
         # -- Step count for the step log --------------------------- #
         self.__stepn    : int = 0
@@ -134,43 +132,73 @@ class TestLogger:
         return self.__logger
 
     @property
-    def term_config_loglevel(self) -> int:
-        return self.__term_config_loglevel
-
-    @term_config_loglevel.setter
-    def term_config_loglevel(self, value: int) -> None:
-        self.__term_config_loglevel = value
-
-    @property
-    def term_setup_loglevel(self) -> int:
-        return self.__term_setup_loglevel
-
-    @term_setup_loglevel.setter
-    def term_setup_loglevel(self, value: int) -> None:
-        self.__term_setup_loglevel = value
-
-    @property
-    def term_call_loglevel(self) -> int:
-        return self.__term_call_loglevel
-
-    @term_call_loglevel.setter
-    def term_call_loglevel(self, value: int) -> None:
-        self.__term_call_loglevel = value
+    def test_procedure(self) -> dict:
+        return self.__test_procedure
 
     @property
     def stepn(self) -> int:
         return self.__stepn
 
+    # @stepn.setter
+    # def stepn(self, step: int) -> None:
+    #     self.__stepn = step
+
     @property
     def substepn(self) -> int:
         return self.__substepn
 
-    def __add_handler(self, handler: Handler) -> None:
-        self.__logger.addHandler( handler )
+    # @substepn.setter
+    # def substepn(self, substep: int) -> None:
+    #     self.__substep = substep
 
-    def __remove_handler(self, handler: Handler) -> None:
-        self.__logger.removeHandler( handler )
-        handler = None
+    # ============================================================================
+    #                              PRIVATE METHODS
+    # ============================================================================
+
+    def __map_level(self, level : Union[str, int]) -> int:
+        if isinstance(level, str):
+            clean_level = level.lower().replace(' ', '').replace('-', '').replace('_', '')
+            return levels.get(clean_level, levels["info"])["level"]
+        
+        return level
+
+    def __add_handler(self, handler_name: str, handler: Handler) -> None:
+        # -- Remove to avoid duplicates ------------------ #
+        self.__remove_handler(handler_name)
+
+        self.__logger.addHandler( handler )
+        self.__active_handlers[handler_name] = handler
+
+    def __remove_handler(self, handler_identifier: Union[str, Handler]) -> None:
+        """Remove a handler by name (string) or by handler object"""
+        
+        if isinstance(handler_identifier, str):
+            # -- Remove by name ----------------------------------- #
+            handler_name = handler_identifier
+            if handler_name in self.__active_handlers:
+                handler = self.__active_handlers[handler_name]
+                self.__logger.removeHandler(handler)
+                handler.close()
+                del self.__active_handlers[handler_name]
+        
+        elif isinstance(handler_identifier, Handler):
+            # -- Remove by handler object ------------------------------------------- #
+            handler_to_remove = handler_identifier
+            handler_name_to_remove = None
+            
+            # -- Find the handler name by comparing handler objects –---------------- #
+            for name, handler in self.__active_handlers.items():
+                if handler is handler_to_remove:
+                    handler_name_to_remove = name
+                    break
+            
+            if handler_name_to_remove:
+                self.__logger.removeHandler(handler_to_remove)
+                handler_to_remove.close()
+                del self.__active_handlers[handler_name_to_remove]
+        
+        else:
+            raise TypeError("handler_identifier must be either a string (handler name) or a Handler object")
 
     def __create_file_handler(self, filepath: str, encoding: str = 'utf-8', mode: str = 'a') -> Handler:
         return logging.FileHandler(filename=filepath, encoding=encoding, mode=mode)
@@ -179,82 +207,125 @@ class TestLogger:
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
 
+    # ============================================================================
+    #                              LOGGER METHODS
+    # ============================================================================
+
     def init_term_handler(
         self,
-        level   : int | None = None,
-        fmt     : str | None = None
+        handler_name : str,
+        level        : Optional[str] = 'info',
+        fmt          : Optional[str] = '[%(levelname)s%(step)s] - %(message)s',
     ):
-        if level is not None:
-            self.__term_config_loglevel = level
+        handler = logging.StreamHandler()
         
-        if fmt is not None:
-            self.__term_format = fmt
+        self.modify_handler_level(handler, level)
 
-        self.__term_handler = logging.StreamHandler()
-        self.__term_handler.setLevel( self.__term_config_loglevel )
-        self.__term_handler.setFormatter(
-            ColorFormatter(fmt=self.__term_format, datefmt=datefmt)
+        handler.setFormatter(
+            ColorFormatter(fmt=fmt, datefmt=datefmt)
         )
         
-        self.__add_handler( self.__term_handler )
+        self.__add_handler( handler_name, handler )
     
-
-    def init_setup_logger(
+    def init_file_handler(
         self,
-        path    : str,
-        level   : int | None = None,
-        fmt     : str | None = None
-    ):
-        if level is not None:
-            self.__setup_file_loglevel = level
-        
-        if fmt is not None:
-            self.__setup_format = fmt
+        handler_name : str,
+        path         : str,
+        level        : Optional[str] = 'info',
+        fmt          : Optional[str] = '[%(levelname)s%(step)s] - %(message)s',
+        mode         : Optional[str] = 'w',
+        encoding     : Optional[str] = 'utf-8'
+    ) -> Handler:
 
         self.__ensure_path( path )
 
-        # -- Configure a new File Handler ------------------------------- #
-        self.__setup_file_handler = self.__create_file_handler(path, mode='w')
-        self.__setup_file_handler.setLevel( self.__setup_file_loglevel )
-        self.__setup_file_handler.setFormatter(
-            logging.Formatter(fmt=self.__setup_format, datefmt=datefmt)
+        # -- Configure a new file handler ------------------------------- #
+        handler = self.__create_file_handler(path, mode=mode, encoding=encoding)
+        self.modify_handler_level(handler, level)
+        handler.setFormatter(
+            logging.Formatter(fmt=fmt, datefmt=datefmt)
         )
 
         # -- Add the handler to the global logger ----------------------- #
-        self.logger.addHandler( self.__setup_file_handler )
+        self.__add_handler(handler_name, handler)
 
-    def init_call_logger(
+        return handler
+
+    def init_procedure_log_handler(
         self,
-        path    : str,
-        level   : int | None = None,
-        fmt     : str | None = None,
-    ):
-        self.__remove_handler( self.__setup_file_handler )
-
-        if level is not None:
-            self.__call_file_loglevel = level
+        handler_name    : str,
+        path            : str,
+        fmt             : Optional[str] = '%(step)s. %(message)s',  # Simple format for procedure log
+        mode            : Optional[str] = 'w',
+        encoding        : Optional[str] = 'utf-8'
+    ) -> Handler:
+        """Initialize a handler that only logs step and substep messages"""
         
-        if fmt is not None:
-            self.__call_format = fmt
+        self.__ensure_path(path)
+        
+        # Create file handler
+        handler = self.__create_file_handler(path, mode=mode, encoding=encoding)
+        
+        # Set level to capture both step and substep (use the lower level)
+        self.modify_handler_level(handler, levels['step']['level'])
+        
+        # Add the step-only filter
+        handler.addFilter( StepOnlyFilter() )
+        
+        # Set formatter (no timestamp/level needed for procedure log)
+        handler.setFormatter( ProcedureFormater(fmt=fmt, datefmt=datefmt)  )
+        
+        # Add to logger
+        self.__add_handler(handler_name, handler)
+        
+        return handler
 
-        self.__ensure_path( path )
+    def remove_handler(
+        self,
+        handler_identifier : Union[str, Handler]
+    ):
+        self.__remove_handler(handler_identifier)
 
-        # -- Configure a new File Handler ------------------------------- #
-        self.__call_file_handler = self.__create_file_handler(path, mode='w')
-        self.__call_file_handler.setLevel( self.__call_file_loglevel )
-        self.__call_file_handler.setFormatter(
-            logging.Formatter(fmt=self.__call_format, datefmt=datefmt)
-        )
+    def modify_handler_level(self, handler_identifier: Union[str, Handler], level: Union[str, int]) -> None:
+        if isinstance(handler_identifier, Handler):
+            handler_identifier.setLevel( self.__map_level(level) )
+        
+        elif isinstance(handler_identifier, str): 
+            if handler_identifier in self.__active_handlers:
+                self.__active_handlers[handler_identifier].setLevel( self.__map_level(level) )
+                
+        else:
+            raise TypeError("handler_identifier must be either a string (handler name) or a Handler object")
 
-        # -- Add the handler to the global logger ----------------------- #
-        self.logger.addHandler( self.__call_file_handler )
+        if self.__map_level(level) == levels['debug']['level']:
+            self.__logger.setLevel( levels['debug']['level'] )
+
+    def reset_steps(self) -> None:
+        self.__stepn = 0
+        self.__substepn = 0
+
+        self.__test_procedure: dict = {
+            'test_id': "",
+            'description': "",
+            'steps': []
+        }
 
 
-    def configure_term_logger_setup(self):
-        self.__term_handler.setLevel( self.__term_setup_loglevel )
-    
-    def configure_term_logger_call(self):
-        self.__term_handler.setLevel( self.__term_call_loglevel )
+    # ============================================================================
+    #                             EXPORT METHODS
+    # ============================================================================
+
+    def export_procedure_json(self, path: str) -> None:
+        self.__ensure_path(path)
+
+        # Open the file in write mode ('w')
+        with open(path, 'w') as json_file:
+            json.dump(self.__test_procedure, json_file, indent=4)
+
+
+    # ============================================================================
+    #                               LOGS METHODS
+    # ============================================================================
 
     def debug(self, *args, sep=' ', end='', enable=True, **kwargs):
         extra = {"step": ""}
@@ -292,7 +363,7 @@ class TestLogger:
         if enable and args: 
             msg = sep.join(str(a) for a in args) + end
             # Correctly call the logger.info method
-            self.__logger._log(levels["pass"], msg, (), **kwargs, extra=extra)
+            self.__logger._log(levels["pass"]["level"], msg, (), **kwargs, extra=extra)
 
     def fail(self, *args, sep=' ', end='', enable=True, **kwargs):
         extra = {"step": ""}
@@ -302,20 +373,33 @@ class TestLogger:
             self.__logger._log(levels["fail"]["level"], msg, (), **kwargs, extra=extra)
     
     def step(self, *args, sep=' ', end='', enable=True, **kwargs):
-        self.stepn += 1
-        self.substepn = 0
-        extra = {"step": f" {self.stepn}"}
+        self.__stepn += 1
+        self.__substepn = 0
+
+        extra = {"step": f" {self.__stepn}"}
 
         if enable and args:  # Only log if enabled and there are arguments
             msg = sep.join(str(a) for a in args) + end
             # Correctly call the logger.info method
             self.__logger._log(levels["step"]["level"], msg, (), **kwargs, extra=extra)
 
+        self.__test_procedure['steps'].append({
+            'id': f"{self.__stepn}",
+            'parent': None,
+            'description': sep.join(str(a) for a in args) + end
+        })
+
     def substep(self, *args, sep=' ', end='', enable=True, **kwargs):
-        self.substepn += 1
-        extra = {"step": f" {self.stepn}.{self.substepn}"}
+        self.__substepn += 1
+
+        extra = {"step": f" {self.__stepn}.{self.__substepn}"}
 
         if enable and args:  # Only log if enabled and there are arguments
             msg = sep.join(str(a) for a in args) + end
             self.__logger._log(levels["substep"]["level"], msg, (), **kwargs, extra=extra)
 
+        self.__test_procedure['steps'].append({
+            'id': f"{self.__stepn}.{self.__substepn}",
+            'parent': f"{self.__stepn}",
+            'description': sep.join(str(a) for a in args) + end
+        })
