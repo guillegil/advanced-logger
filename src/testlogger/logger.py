@@ -7,6 +7,7 @@ from logging import Logger, Handler
 
 import logging
 import shutil
+import sys
 from typing import Optional, Union
 
 from colored import Fore as fg
@@ -128,6 +129,46 @@ class TestLogger:
         self.__substepn : int = 0
     
     @property
+    def DEBUG(self) -> int:
+        return levels['debug']['level']
+
+    @property
+    def INFO(self) -> int:
+        return levels['info']['level']
+
+    @property
+    def WARNING(self) -> int:
+        return levels['warning']['level']
+
+    @property
+    def ERROR(self) -> int:
+        return levels['error']['level']
+
+    @property
+    def CRITICAL(self) -> int:
+        return levels['critical']['level']
+
+    # =============================================
+    #          TEST LEVELS PROPERTIES
+    # =============================================
+
+    @property
+    def STEP(self) -> int:
+        return levels['step']['level']
+
+    @property
+    def SUBSTEP(self) -> int:
+        return levels['substep']['level']
+
+    @property
+    def PASS(self) -> int:
+        return levels['pass']['level']
+
+    @property
+    def FAIL(self) -> int:
+        return levels['fail']['level']
+    
+    @property
     def logger(self) -> Logger:
         return self.__logger
 
@@ -139,17 +180,9 @@ class TestLogger:
     def stepn(self) -> int:
         return self.__stepn
 
-    # @stepn.setter
-    # def stepn(self, step: int) -> None:
-    #     self.__stepn = step
-
     @property
     def substepn(self) -> int:
         return self.__substepn
-
-    # @substepn.setter
-    # def substepn(self, substep: int) -> None:
-    #     self.__substep = substep
 
     # ============================================================================
     #                              PRIVATE METHODS
@@ -217,7 +250,7 @@ class TestLogger:
         level        : Optional[str] = 'info',
         fmt          : Optional[str] = '[%(levelname)s%(step)s] - %(message)s',
     ):
-        handler = logging.StreamHandler()
+        handler = logging.StreamHandler(sys.stdout)
         
         self.modify_handler_level(handler, level)
 
