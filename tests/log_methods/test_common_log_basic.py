@@ -1,5 +1,5 @@
 
-from testlogger import log
+from advanced_logger import log
 
 def test_debug_logs(caplog):
     with caplog.at_level(log.DEBUG):

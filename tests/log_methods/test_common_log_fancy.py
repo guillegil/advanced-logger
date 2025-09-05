@@ -1,7 +1,7 @@
 
 import pytest
 
-from testlogger import log
+from advanced_logger import log
 
 import sys
 from io import StringIO

@@ -4,7 +4,7 @@
 import pytest
 from pytest import Item
 
-from testlogger import log
+from advanced_logger import log
 from pytest_meta import meta
 
 import os

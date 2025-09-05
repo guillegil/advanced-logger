@@ -1,8 +1,8 @@
 
 
-from testlogger import log
+from advanced_logger import log
 
 def test_logger():
-    from testlogger import TestLogger
+    from advanced_logger import AdvancedLogger
 
-    assert isinstance(log, TestLogger), f'log, is not instance of a TestLogger class. log is {type(log)}'
+    assert isinstance(log, AdvancedLogger), f'log, is not instance of a TestLogger class. log is {type(log)}'

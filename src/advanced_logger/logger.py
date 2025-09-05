@@ -104,7 +104,7 @@ class StepOnlyFilter(logging.Filter):
     def filter(self, record):
         return record.levelno in [levels["step"]["level"], levels["substep"]["level"]]
 
-class TestLogger:
+class AdvancedLogger:
     
     def __init__(
         self, 
