@@ -1,119 +1,37 @@
 
-from datetime import datetime
-from functools import wraps
 import json
-import os
+
 from logging import Logger, Handler
 
 import logging
-import shutil
+
 import sys
 from typing import Optional, Union
 
-from colored import Fore as fg
-from colored import Back as bg
-from colored import Style as st
-
 from pathlib import Path
+from .formatters import ColorFormatter, ProcedureFormater
+from .levels import get_level_number, get_level
 
 datefmt = "%Y-%m-%d %H:%M:%S"
 
-levels = {
-    "debug"     : {"level": logging.DEBUG, "color": fg.CYAN},
-    "info"      : {"level": logging.INFO, "color": fg.WHITE},
-    "warning"   : {"level": logging.WARNING, "color": fg.YELLOW},
-    "error"     : {"level": logging.ERROR, "color": fg.RED},
-    "critical"  : {"level": logging.CRITICAL, "color": fg.RED},
-    "step"      : {"level": 21, "color": fg.WHITE},
-    "substep"   : {"level": 22, "color": fg.light_gray},
-    "pass"      : {"level": 23, "color": fg.GREEN},
-    "fail"      : {"level": 31, "color": fg.RED},
-}
 
-# -- Reverse lookup ------------------------------------------- #
-levels_by_value = {v["level"]: k for k, v in levels.items()}
-
-
-class ColorFormatter(logging.Formatter):
-
-    RESET = st.RESET
-
-    def __init__(self, fmt: str = None, datefmt: str = None, style='%'):
-        if fmt is None:
-            fmt = "[%(asctime)s] %(levelname)-8s %(message)s"
-
-        # Register custom levels
-        logging.addLevelName(levels['step']['level'], "STEP")
-        logging.addLevelName(levels['substep']['level'], "SUBSTEP")
-        logging.addLevelName(levels['pass']['level'], "PASS")
-        logging.addLevelName(levels['fail']['level'], "FAIL")
-
-        super().__init__(fmt, datefmt, style)
-
-    def __get_level_by_value(self, target_level: int) -> tuple:
-        key = levels_by_value.get(target_level)
-        return (key, levels[key]) if key else (None, None)
-
-    def format(self, record):
-        # Get original formatted message
-        formatted = super().format(record)
-
-        # Get level info using reverse lookup
-        level_key, level_info = self.__get_level_by_value(record.levelno)
-        color = level_info["color"] if level_info else self.RESET
-
-        # Add indentation for substep
-        if level_key == "substep":
-            formatted = "   " + formatted
-
-        # Wrap the entire line in color, then reset
-        return f"{color}{formatted}{self.RESET}"
-
-class ProcedureFormater(logging.Formatter):
-
-    def __init__(self, fmt: str = None, datefmt: str = None, style='%'):
-        if fmt is None:
-            fmt = "[%(asctime)s] %(levelname)-8s %(message)s"
-
-        # Register custom levels
-        logging.addLevelName(levels['step']['level'], "STEP")
-        logging.addLevelName(levels['substep']['level'], "SUBSTEP")
-
-        super().__init__(fmt, datefmt, style)
-
-    def __get_level_by_value(self, target_level: int) -> tuple:
-        key = levels_by_value.get(target_level)
-        return (key, levels[key]) if key else (None, None)
-
-    def format(self, record):
-        # Get original formatted message
-        formatted = super().format(record)
-
-        # Get level info using reverse lookup
-        level_key, level_info = self.__get_level_by_value(record.levelno)
-
-        # Add indentation for substep
-        if level_key == "substep":
-            formatted = "   " + formatted
-
-        # Wrap the entire line in color, then reset
-        return formatted
 
 class StepOnlyFilter(logging.Filter):
     """Filter that only allows step and substep log records through"""
     def filter(self, record):
-        return record.levelno in [levels["step"]["level"], levels["substep"]["level"]]
+        return record.levelno in [get_level_number('step'), get_level_number('substep')]
 
 class AdvancedLogger:
     
     def __init__(
         self, 
-        logger_name: str = "test_logger",
+        logger_name: str = "advanced_logger_instance",
         *args,
         **kwargs
     ):
         self.__logger : Logger = logging.getLogger( logger_name )
-        self.__logger.setLevel(levels['info']['level'])
+        print(f"{self.INFO=}")
+        self.__logger.setLevel( self.INFO )
 
         self.__active_handlers: dict[str, Handler] = {}
 
@@ -130,23 +48,23 @@ class AdvancedLogger:
     
     @property
     def DEBUG(self) -> int:
-        return levels['debug']['level']
+        return get_level_number('debug')
 
     @property
     def INFO(self) -> int:
-        return levels['info']['level']
+        return get_level_number('info')
 
     @property
     def WARNING(self) -> int:
-        return levels['warning']['level']
+        return get_level_number('warning')
 
     @property
     def ERROR(self) -> int:
-        return levels['error']['level']
+        return get_level_number('error')
 
     @property
     def CRITICAL(self) -> int:
-        return levels['critical']['level']
+        return get_level_number('critical')
 
     # =============================================
     #          TEST LEVELS PROPERTIES
@@ -154,19 +72,19 @@ class AdvancedLogger:
 
     @property
     def STEP(self) -> int:
-        return levels['step']['level']
+        return get_level_number('step')
 
     @property
     def SUBSTEP(self) -> int:
-        return levels['substep']['level']
+        return get_level_number('substep')
 
     @property
     def PASS(self) -> int:
-        return levels['pass']['level']
+        return get_level_number('pass')
 
     @property
     def FAIL(self) -> int:
-        return levels['fail']['level']
+        return get_level_number('fail')
     
     @property
     def logger(self) -> Logger:
@@ -189,11 +107,7 @@ class AdvancedLogger:
     # ============================================================================
 
     def __map_level(self, level : Union[str, int]) -> int:
-        if isinstance(level, str):
-            clean_level = level.lower().replace(' ', '').replace('-', '').replace('_', '')
-            return levels.get(clean_level, levels["info"])["level"]
-        
-        return level
+        return get_level(level)
 
     def __add_handler(self, handler_name: str, handler: Handler) -> None:
         # -- Remove to avoid duplicates ------------------ #
@@ -330,8 +244,8 @@ class AdvancedLogger:
         else:
             raise TypeError("handler_identifier must be either a string (handler name) or a Handler object")
 
-        if self.__map_level(level) == levels['debug']['level']:
-            self.__logger.setLevel( levels['debug']['level'] )
+        if self.__map_level(level) == get_level('debug'):
+            self.__logger.setLevel( get_level('debug') )
 
     def reset_steps(self) -> None:
         self.__stepn = 0
@@ -435,4 +349,4 @@ class AdvancedLogger:
             'id': f"{self.__stepn}.{self.__substepn}",
             'parent': f"{self.__stepn}",
             'description': sep.join(str(a) for a in args) + end
-        })
+        }) 
