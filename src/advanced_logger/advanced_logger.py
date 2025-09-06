@@ -47,6 +47,14 @@ class AdvancedLogger(BasicLogger):
         self.__substepn : int = 0
     
 
+    def __enter__(self):
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        # -- Cleanup handlers ------------------------------------- #
+        for handler_name in list(self.active_handlers.keys()):
+            self.remove_handler(handler_name)
+
     # =============================================
     #          TEST LEVELS PROPERTIES
     # =============================================
