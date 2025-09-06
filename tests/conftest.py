@@ -46,7 +46,7 @@ def procedure_json_file() -> str:
 def pytest_runtest_setup(item: Item):
     print()
     log.set_logger_level('debug')
-    log.set_handler_level('term_default', 'debug')
+    log.init_term_handler('default_term_logger', level=log.DEBUG)
     log.init_file_handler('stage_handler', gen_setup_log_file(), level='debug')
 
 

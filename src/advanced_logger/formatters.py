@@ -65,13 +65,25 @@ class ColorFormatter(Formatter):
         # -- Extract level info ------------------------------ #
         levelname: str = record.levelname
         levelno: int = record.levelno
-
-        # -- Get original formatted message ------------------ #
+        
+        # -- Handle dynamic spacing for step/substep levels -- #
+        current_level = get_level_name_by_number(levelno)
+        step_level = get_level_name('step')
+        substep_level = get_level_name('substep')
+        
+        # Create a custom record with modified levelname for spacing
+        if current_level in [step_level, substep_level]:
+            # Add space after levelname for step/substep levels
+            record.levelname = levelname + " "
+        
+        # -- Get formatted message with potential spacing --- #
         formatted = super().format(record)
+        
+        # Restore original levelname
+        record.levelname = levelname
 
         # -- Add indentation for substep --------------------- #
-        # -- Add indentation for substep --------------------------- #
-        if get_level_name_by_number(levelno) == get_level_name('substep'):
+        if current_level == substep_level:
             formatted = "   " + formatted
 
         # -- Wrap the entire line in color, then reset ------- #

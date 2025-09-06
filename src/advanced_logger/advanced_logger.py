@@ -86,6 +86,25 @@ class AdvancedLogger(BasicLogger):
     # ============================================================================
     #                              LOGGER METHODS
     # ============================================================================
+    
+    def init_term_handler(
+        self, 
+        handler_name: str,
+        level: str|int = 'info',
+        fmt = '[%(levelname)s%(step)s] - %(message)s'
+    ):
+        return super().init_term_handler(handler_name, level, fmt)
+
+    def init_file_handler(
+        self, 
+        handler_name, 
+        path, 
+        level = 'info', 
+        fmt = '[%(levelname)s%(step)s] - %(message)s',
+        mode = 'w',
+        encoding = 'utf-8'
+    ):
+        return super().init_file_handler(handler_name, path, level, fmt, mode, encoding)
 
     def init_procedure_log_handler(
         self,

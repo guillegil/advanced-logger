@@ -25,7 +25,10 @@ class BasicLogger:
 
         self.__active_handlers: dict[str, Handler] = {}
 
-        self.init_term_handler('term_default', level=self.WARNING)
+        init_default_term_handler = kwargs.get('init_default_term_handler', False)
+
+        if init_default_term_handler:
+            self.init_term_handler('default_term_logger', level=self.INFO)
         
     @property
     def name(self) -> str:
@@ -120,7 +123,7 @@ class BasicLogger:
         self,
         handler_name : str,
         level        : Optional[str] = 'info',
-        fmt          : Optional[str] = '[%(levelname)s%(step)s] - %(message)s',
+        fmt          : Optional[str] = '[%(levelname)s] - %(message)s',
     ):
         handler = logging.StreamHandler(sys.stdout)
         
@@ -137,7 +140,7 @@ class BasicLogger:
         handler_name : str,
         path         : str,
         level        : Optional[str] = 'info',
-        fmt          : Optional[str] = '[%(levelname)s%(step)s] - %(message)s',
+        fmt          : Optional[str] = '[%(levelname)s] - %(message)s',
         mode         : Optional[str] = 'w',
         encoding     : Optional[str] = 'utf-8'
     ) -> Handler:
@@ -217,3 +220,11 @@ class BasicLogger:
             msg = sep.join(str(a) for a in args) + end
             # Correctly call the logger.info method
             self.__logger.error(msg, **kwargs, extra=extra)
+
+    def critical(self, *args, sep=' ', end='', enable=True, **kwargs):
+        extra = kwargs.pop('extra', {})
+
+        if enable and args:  
+            msg = sep.join(str(a) for a in args) + end
+            # Correctly call the logger.info method
+            self.__logger.critical(msg, **kwargs, extra=extra)

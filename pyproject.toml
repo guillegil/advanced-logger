@@ -3,16 +3,14 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "testlogger"
+name = "advancedlogger"
 version = "0.1.0"
-description = "A custom logger with step and substep log levels, designed for test workflows."
+description = "A custom logger with advanced capabilities to easy up development of other modules and testing."
 readme = "README.md"
 requires-python = ">=3.8"
 license = { file = "LICENSE" }
 
-authors = [
-  { name = "Your Name", email = "your.email@example.com" }
-]
+authors = [{ name = "Guillermo Gil", email = "guillegil@proton.me" }]
 
 keywords = ["pytest", "logger", "qa", "logging", "reporting", "test-procedure"]
 
@@ -27,13 +25,11 @@ classifiers = [
   "Operating System :: OS Independent",
 ]
 
-dependencies = [
-  "colored>=1.4.4"
-]
+dependencies = ["colored>=1.4.4"]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/testlogger"
-BugTracker = "https://github.com/yourusername/testlogger/issues"
+Homepage = "https://github.com/guillegil/advanced_logger"
+BugTracker = "https://github.com/guillegil/advanced_logger/issues"
 
 [tool.setuptools.packages.find]
-where = ["src"]   # tells setuptools to look for packages inside src/
+where = ["src"] # tells setuptools to look for packages inside src/
