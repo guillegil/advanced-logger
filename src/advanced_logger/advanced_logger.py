@@ -21,14 +21,33 @@ datefmt = "%Y-%m-%d %H:%M:%S"
 
 
 class AdvancedLogger(BasicLogger):
-    
+    _instances: dict[str, "AdvancedLogger"] = {}
+
+    def __new__(
+        cls: "AdvancedLogger", 
+        logger_name: str = "default",
+        *args,
+        **kwargs
+    ) -> "AdvancedLogger":
+        if logger_name in cls._instances:
+            return cls._instances[logger_name]
+        
+        instance = super().__new__(cls)
+        cls._instances[logger_name] = instance
+
+        return instance
+
     def __init__(
         self, 
         logger_name: str = "advanced_logger_instance",
         *args,
         **kwargs
     ):
+        if getattr(self, "_init_done", False):
+            return
+        
         super().__init__(logger_name, args, kwargs)
+        self._init_done = True
 
         add_new_level('step')
         add_new_level('substep')
