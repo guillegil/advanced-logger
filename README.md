@@ -87,9 +87,10 @@ log.export_procedure_json('procedure.json')
 #    2.4. Trigger downstream notification handler,
 ```
 
+- Generated procedure log @ ./procedure.json (Also accesible by `log.test_procedure`):
+
 ```json
-// -- Generated procedure log @ ./procedure.json --------------------- //
-// -- Also accesible by log.test_procedure --------------------------- //
+
 {
     "test_id": "",
     "description": "",
