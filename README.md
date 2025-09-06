@@ -60,6 +60,8 @@ log.substep("Validate system’s response matches schema")
 log.substep("Confirm record was written into database")
 log.substep("Trigger downstream notification handler")
 
+log.export_procedure_json('procedure.json')
+
 # -- Generated termianl log ---------------------------------------- #
 #
 # [STEP 1] - Start the core application service
@@ -83,6 +85,26 @@ log.substep("Trigger downstream notification handler")
 #    2.2. Validate system’s response matches schema,
 #    2.3. Confirm record was written into database,
 #    2.4. Trigger downstream notification handler,
+```
+
+```json
+// -- Generated procedure log @ ./procedure.json --------------------- //
+// -- Also accesible by log.test_procedure --------------------------- //
+{
+    "test_id": "",
+    "description": "",
+    "steps": [
+        {"id": "1", "parent": null, "description": "Start the core application service"},
+        {"id": "1.1", "parent": "1", "description": "Launch background worker process"},
+        {"id": "1.2", "parent": "1", "description": "Verify service is listening on expected port"},
+        {"id": "1.3", "parent": "1", "description": "Check that startup logs contain no errors"},
+        {"id": "2", "parent": null, "description": "Execute main workflow scenario"},
+        {"id": "2.1", "parent": "2", "description": "Send mock API request with valid payload"},
+        {"id": "2.2", "parent": "2", "description": "Validate system's response matches schema"},
+        {"id": "2.3", "parent": "2", "description": "Confirm record was written into database"},
+        {"id": "2.4", "parent": "2", "description": "Trigger downstream notification handler"}
+    ]
+}
 ```
 
 ## 🔧 Development Setup
