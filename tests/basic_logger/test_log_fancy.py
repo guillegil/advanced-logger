@@ -3,28 +3,13 @@ import pytest
 
 from advanced_logger import log
 
-import sys
-from io import StringIO
-from contextlib import contextmanager
-
-@contextmanager
-def capture_stdout():
-    old_stdout = sys.stdout
-    captured_output = StringIO()
-    sys.stdout = captured_output
-    try:
-        yield captured_output
-    finally:
-        sys.stdout = old_stdout
-
 def test_debug_logs(caplog):    
-    with capture_stdout() as captured:
-        with caplog.at_level(log.DEBUG):
-            log.debug('This is a funny log 🤣')
-            log.debug('This debug', 'message', 'was', 'build', 'with multiple', 'strings')
-            log.debug('This', 'debug', 'message', 'is', '-', 'separated', sep='-')
-            log.debug('This', 'debug', 'message', 'is', '🐍', 'separated', sep='🐍')
-            log.debug('This debug should not be printed', enable=False)
+    with caplog.at_level(log.DEBUG):
+        log.debug('This is a funny log 🤣')
+        log.debug('This debug', 'message', 'was', 'build', 'with multiple', 'strings')
+        log.debug('This', 'debug', 'message', 'is', '-', 'separated', sep='-')
+        log.debug('This', 'debug', 'message', 'is', '🐍', 'separated', sep='🐍')
+        log.debug('This debug should not be printed', enable=False)
 
     assert 'This is a funny log 🤣' in caplog.text, f'Captured log is not as expected, got "{caplog.text}"'
     assert 'This debug message was build with multiple strings' in caplog.text, f'Captured log is not as expected, got "{caplog.text}"'
@@ -46,8 +31,6 @@ def test_info_logs(caplog):
     assert 'This-info-message-is---separated' in caplog.text, f'Captured log is not as expected, got "{caplog.text}"'
     assert 'This🐍info🐍message🐍is🐍🐍🐍separated' in caplog.text, f'Captured log is not as expected, got "{caplog.text}"'
     assert 'This info should not be printed' not in caplog.text, f'Captured log is not as expected, got "{caplog.text}"'
-
-    log_path = "./reports/test_info_logs"
 
 def test_warning_logs(caplog):
     with caplog.at_level(log.WARNING):

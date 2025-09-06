@@ -31,16 +31,19 @@ def _normalize_level(level_id: str) -> str:
     return level_id
 
 def get_level_number(level_id: str) -> int:
+    if isinstance(level_id, int):
+        return level_id
+    
     level_id = _normalize_level(level_id)
     return _LEVELS.get(level_id, {}).get('levelno', DEFAULT_LEVELNO)
 
 def get_level_name(level_id: str) -> int:
     level_id = _normalize_level(level_id)
-    return _LEVELS.get(level_id, {}).get('levelno', DEFAULT_LEVEL_NAME)
+    return _LEVELS.get(level_id, {}).get('name', DEFAULT_LEVEL_NAME)
 
 def get_level_color(level_id: str) -> str:
     level_id = _normalize_level(level_id)
-    return _LEVELS.get(level_id, {}).get('levelno', DEFAULT_LEVEL_COLOR)
+    return _LEVELS.get(level_id, {}).get('color', DEFAULT_LEVEL_COLOR)
 
 def get_level_name_by_number(levelno: int) -> str:
     for level_key, _ in _LEVELS.items():
@@ -72,7 +75,7 @@ def get_level(level_id: str | int) -> int|str:
         else: 
             return get_level_number(level_id)
     elif isinstance(level_id, int):
-        return get_level_name(level_id)
+        return get_level_name_by_number(level_id)
     else:
         # -- Maybe it's time to show a warning here... ------------------------- #
         return DEFAULT_LEVEL_NAME
