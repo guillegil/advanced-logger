@@ -258,7 +258,8 @@ class AdvancedLogger(BasicLogger):
         self.__test_procedure['steps'].append({
             'id': f"{self.__stepn}",
             'parent': None,
-            'description': sep.join(str(a) for a in args) + end
+            'description': sep.join(str(a) for a in args) + end,
+            'extra': kwargs
         })
 
     def substep(self, *args, sep=' ', end='', enable=True, **kwargs):
@@ -273,5 +274,6 @@ class AdvancedLogger(BasicLogger):
         self.__test_procedure['steps'].append({
             'id': f"{self.__stepn}.{self.__substepn}",
             'parent': f"{self.__stepn}",
-            'description': sep.join(str(a) for a in args) + end
+            'description': sep.join(str(a) for a in args) + end,
+            'extra': kwargs
         }) 
