@@ -222,7 +222,8 @@ class AdvancedLogger(BasicLogger):
             msg = sep.join(str(a) for a in args) + end
 
             # Apply indent to every line in the message
-            msg = '\n'.join(indent + line for line in msg.split('\n'))
+            msg = ''.join(part if i == 0 else indent + part
+              for i, part in enumerate(msg.splitlines(keepends=True)))
 
             # Correctly call the logger.info method
             self.log(self.PASS, msg, extra=extra)
@@ -234,8 +235,8 @@ class AdvancedLogger(BasicLogger):
         if enable and args: 
             msg = sep.join(str(a) for a in args) + end
 
-            # Apply indent to every line in the message
-            msg = '\n'.join(indent + line for line in msg.split('\n'))
+            msg = ''.join(part if i == 0 else indent + part
+              for i, part in enumerate(msg.splitlines(keepends=True)))
 
             # Correctly call the logger.info method
             self.log(self.FAIL, msg, extra=extra)
@@ -250,8 +251,8 @@ class AdvancedLogger(BasicLogger):
         if enable and args: 
             msg = sep.join(str(a) for a in args) + end
 
-            # Apply indent to every line in the message
-            msg = '\n'.join(indent + line for line in msg.split('\n'))
+            msg = ''.join(part if i == 0 else indent + part
+              for i, part in enumerate(msg.splitlines(keepends=True)))
 
             # Correctly call the logger.info method
             self.log(self.STEP, msg, extra=extra)
@@ -274,8 +275,8 @@ class AdvancedLogger(BasicLogger):
         if enable and args: 
             msg = sep.join(str(a) for a in args) + end
 
-            # Apply indent to every line in the message
-            msg = '\n'.join(indent + line for line in msg.split('\n'))
+            msg = ''.join(part if i == 0 else indent + part
+              for i, part in enumerate(msg.splitlines(keepends=True)))
 
             # Correctly call the logger.info method
             self.log(self.SUBSTEP, msg, extra=extra)
