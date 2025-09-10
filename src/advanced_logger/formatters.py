@@ -29,6 +29,9 @@ class FileFormatter(Formatter):
         super().__init__(fmt, datefmt, style)
 
     def format(self, record):
+        if not hasattr(record, 'indent'):
+            record.indent = ""    
+
         # -- Extract level info ------------------------------ #
         levelname: str = record.levelname
         levelno: int = record.levelno
@@ -62,6 +65,9 @@ class ColorFormatter(Formatter):
         super().__init__(fmt, datefmt, style)
 
     def format(self, record):
+        if not hasattr(record, 'indent'):
+            record.indent = ""
+
         # -- Extract level info ------------------------------ #
         levelname: str = record.levelname
         levelno: int = record.levelno
@@ -108,6 +114,9 @@ class ProcedureFormater(Formatter):
         super().__init__(fmt, datefmt, style)
 
     def format(self, record):
+        if not hasattr(record, 'indent'):
+            record.indent = ""
+
         # -- Extract level info ------------------------------------ #
         levelname: str = record.levelname
         levelno: int = record.levelno

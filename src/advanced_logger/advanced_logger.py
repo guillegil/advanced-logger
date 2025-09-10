@@ -110,15 +110,19 @@ class AdvancedLogger(BasicLogger):
     def logger(self) -> Logger:
         return super().logger
 
+    @staticmethod
+    def has_instance(logger_name: str) -> bool:
+        return logger_name in AdvancedLogger._instances
+
     # ============================================================================
     #                              LOGGER METHODS
     # ============================================================================
-    
+
     def init_term_handler(
         self, 
         handler_name: str,
         level: str|int = 'info',
-        fmt = '[%(levelname)s%(step)s] - %(message)s'
+        fmt = '%(indent)s[%(levelname)s%(step)s] - %(message)s'
     ):
         return super().init_term_handler(handler_name, level, fmt)
 
@@ -127,7 +131,7 @@ class AdvancedLogger(BasicLogger):
         handler_name, 
         path, 
         level = 'info', 
-        fmt = '[%(levelname)s%(step)s] - %(message)s',
+        fmt = '%(indent)s[%(levelname)s%(step)s] - %(message)s',
         mode = 'w',
         encoding = 'utf-8'
     ):
@@ -169,7 +173,8 @@ class AdvancedLogger(BasicLogger):
         self.__test_procedure: dict = {
             'test_id': "",
             'description': "",
-            'steps': []
+            'steps': [],
+            'procedure_info': {}
         }
 
 
@@ -195,85 +200,91 @@ class AdvancedLogger(BasicLogger):
 
         kwargs['extra']['step'] = kwargs['extra'].get('step', '')
 
-        super().debug(*args, sep=sep, end=end, enable=enable, **kwargs)
+        super().debug(*args, sep=sep, end=end, enable=enable)
 
-    def info(self, *args, sep=' ', end='', enable=True, **kwargs):
-        if 'extra' not in kwargs:
-            kwargs['extra'] = {}
+    def info(self, *args, sep=' ', end='', enable=True):
+        super().info(*args, sep=sep, end=end, enable=enable)
 
-        kwargs['extra']['step'] = kwargs['extra'].get('step', '')
-
-        super().info(*args, sep=sep, end=end, enable=enable, **kwargs)
-
-    def warning(self, *args, sep=' ', end='', enable=True, **kwargs):
-        if 'extra' not in kwargs:
-            kwargs['extra'] = {}
-
-        kwargs['extra']['step'] = kwargs['extra'].get('step', '')
-
-        super().warning(*args, sep=sep, end=end, enable=enable, **kwargs)
+    def warning(self, *args, sep=' ', end='', enable=True):
+        super().warning(*args, sep=sep, end=end, enable=enable)
 
     def error(self, *args, sep=' ', end='', enable=True, **kwargs):
-        if 'extra' not in kwargs:
-            kwargs['extra'] = {}
-
-        kwargs['extra']['step'] = kwargs['extra'].get('step', '')
-
-        super().error(*args, sep=sep, end=end, enable=enable, **kwargs)
+        super().error(*args, sep=sep, end=end, enable=enable)
 
     def critical(self, *args, sep=' ', end='', enable=True, **kwargs):
-        if 'extra' not in kwargs:
-            kwargs['extra'] = {}
-
-        kwargs['extra']['step'] = kwargs['extra'].get('step', '')
-
-        super().critical(*args, sep=sep, end=end, enable=enable, **kwargs)
+        super().critical(*args, sep=sep, end=end, enable=enable)
 
     def passed(self, *args, sep=' ', end='', enable=True, **kwargs):
-        extra = {"step": ""}
+        indent :str = " "*kwargs.get('indent', 0)
+        extra = {"step": "", "indent": indent}
 
         if enable and args: 
             msg = sep.join(str(a) for a in args) + end
+
+            # Apply indent to every line in the message
+            msg = '\n'.join(indent + line for line in msg.split('\n'))
+
             # Correctly call the logger.info method
-            self.log(self.PASS, msg, **kwargs, extra=extra)
+            self.log(self.PASS, msg, extra=extra)
 
     def fail(self, *args, sep=' ', end='', enable=True, **kwargs):
-        extra = {"step": ""}
+        indent:str  = " "*kwargs.get('indent', 0)
+        extra = {"step": "", "indent": indent}
 
-        if enable and args:
+        if enable and args: 
             msg = sep.join(str(a) for a in args) + end
-            self.log(self.FAIL, msg, **kwargs, extra=extra)
-    
+
+            # Apply indent to every line in the message
+            msg = '\n'.join(indent + line for line in msg.split('\n'))
+
+            # Correctly call the logger.info method
+            self.log(self.FAIL, msg, extra=extra)
+
     def step(self, *args, sep=' ', end='', enable=True, **kwargs):
         self.__stepn += 1
         self.__substepn = 0
 
-        extra = {"step": f"{self.__stepn}"}
+        indent :str = " "*kwargs.get('indent', 0)
+        extra = {"step": f"{self.__stepn}", "indent": indent}
 
-        if enable and args:  # Only log if enabled and there are arguments
+        if enable and args: 
             msg = sep.join(str(a) for a in args) + end
+
+            # Apply indent to every line in the message
+            msg = '\n'.join(indent + line for line in msg.split('\n'))
+
             # Correctly call the logger.info method
-            self.log(self.STEP, msg, **kwargs, extra=extra)
+            self.log(self.STEP, msg, extra=extra)
+
+        procedure_info = kwargs.get('procedure_info', {})
 
         self.__test_procedure['steps'].append({
             'id': f"{self.__stepn}",
             'parent': None,
             'description': sep.join(str(a) for a in args) + end,
-            'extra': kwargs
+            'procedure_info': procedure_info
         })
 
     def substep(self, *args, sep=' ', end='', enable=True, **kwargs):
         self.__substepn += 1
 
-        extra = {"step": f"{self.__stepn}.{self.__substepn}"}
+        indent :str = " "*kwargs.get('indent', 0)
+        extra = {"step": f"{self.__stepn}.{self.__substepn}", "indent": indent}
 
-        if enable and args:  # Only log if enabled and there are arguments
+        if enable and args: 
             msg = sep.join(str(a) for a in args) + end
-            self.log(self.SUBSTEP, msg, **kwargs, extra=extra)
+
+            # Apply indent to every line in the message
+            msg = '\n'.join(indent + line for line in msg.split('\n'))
+
+            # Correctly call the logger.info method
+            self.log(self.SUBSTEP, msg, extra=extra)
+
+        procedure_info = kwargs.get('procedure_info', {})
 
         self.__test_procedure['steps'].append({
             'id': f"{self.__stepn}.{self.__substepn}",
             'parent': f"{self.__stepn}",
             'description': sep.join(str(a) for a in args) + end,
-            'extra': kwargs
+            'procedure_info': procedure_info
         }) 

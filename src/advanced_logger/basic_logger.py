@@ -123,7 +123,7 @@ class BasicLogger:
         self,
         handler_name : str,
         level        : Optional[str] = 'info',
-        fmt          : Optional[str] = '[%(levelname)s] - %(message)s',
+        fmt          : Optional[str] = '%(indent)s[%(levelname)s] - %(message)s',
     ):
         handler = logging.StreamHandler(sys.stdout)
         
@@ -140,7 +140,7 @@ class BasicLogger:
         handler_name : str,
         path         : str,
         level        : Optional[str] = 'info',
-        fmt          : Optional[str] = '[%(levelname)s] - %(message)s',
+        fmt          : Optional[str] = '%(indent)s[%(levelname)s] - %(message)s',
         mode         : Optional[str] = 'w',
         encoding     : Optional[str] = 'utf-8'
     ) -> Handler:
@@ -189,14 +189,14 @@ class BasicLogger:
 
     def log(self, level: int, msg: str, extra=None, **kwargs):
         level = get_level_number(level)
-        self.logger._log(level, msg, (), **kwargs, extra=extra)
+        self.logger._log(level, msg, (), extra=extra)
 
     def debug(self, *args, sep=' ', end='', enable=True, **kwargs):
         extra = kwargs.pop('extra', {})
 
         if enable and args:
             msg = sep.join(str(a) for a in args) + end
-            self.__logger.debug(msg, **kwargs, extra=extra)
+            self.__logger.debug(msg, extra=extra)
 
     def info(self, *args, sep=' ', end='', enable=True, **kwargs):
         extra = kwargs.pop('extra', {})
@@ -204,14 +204,14 @@ class BasicLogger:
         if enable and args: 
             msg = sep.join(str(a) for a in args) + end
             # Correctly call the logger.info method
-            self.__logger.info(msg, **kwargs, extra=extra)
+            self.__logger.info(msg, extra=extra)
 
     def warning(self, *args, sep=' ', end='', enable=True, **kwargs):
         extra = kwargs.pop('extra', {})
 
         if enable and args:  
             msg = sep.join(str(a) for a in args) + end
-            self.__logger.warning(msg, **kwargs, extra=extra)
+            self.__logger.warning(msg, extra=extra)
 
     def error(self, *args, sep=' ', end='', enable=True, **kwargs):
         extra = kwargs.pop('extra', {})
@@ -219,7 +219,7 @@ class BasicLogger:
         if enable and args:  
             msg = sep.join(str(a) for a in args) + end
             # Correctly call the logger.info method
-            self.__logger.error(msg, **kwargs, extra=extra)
+            self.__logger.error(msg, extra=extra)
 
     def critical(self, *args, sep=' ', end='', enable=True, **kwargs):
         extra = kwargs.pop('extra', {})
@@ -227,4 +227,4 @@ class BasicLogger:
         if enable and args:  
             msg = sep.join(str(a) for a in args) + end
             # Correctly call the logger.info method
-            self.__logger.critical(msg, **kwargs, extra=extra)
+            self.__logger.critical(msg, extra=extra)
