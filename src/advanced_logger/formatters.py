@@ -30,7 +30,10 @@ class FileFormatter(Formatter):
 
     def format(self, record):
         if not hasattr(record, 'indent'):
-            record.indent = ""    
+            record.indent = ''   
+
+        if not hasattr(record, 'step'):
+            record.step = '' 
 
         # -- Extract level info ------------------------------ #
         levelname: str = record.levelname
@@ -66,7 +69,11 @@ class ColorFormatter(Formatter):
 
     def format(self, record):
         if not hasattr(record, 'indent'):
-            record.indent = ""
+            record.indent = ''   
+
+        if not hasattr(record, 'step'):
+            record.step = '' 
+
 
         # -- Extract level info ------------------------------ #
         levelname: str = record.levelname

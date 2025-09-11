@@ -195,11 +195,6 @@ class AdvancedLogger(BasicLogger):
     # ============================================================================
 
     def debug(self, *args, sep=' ', end='', enable=True, **kwargs):
-        if 'extra' not in kwargs:
-            kwargs['extra'] = {}
-
-        kwargs['extra']['step'] = kwargs['extra'].get('step', '')
-
         super().debug(*args, sep=sep, end=end, enable=enable)
 
     def info(self, *args, sep=' ', end='', enable=True):
