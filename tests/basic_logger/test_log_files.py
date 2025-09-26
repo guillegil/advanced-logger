@@ -27,7 +27,7 @@ def test_log_files(call_log_file, level, message):
         log_content.replace('\n', '')
     
     levelname: str = get_level_name(level)
-    if level != 'substep':
+    if level not in ['substep', 'step']:
         assert f"[{levelname}] - {message}" in log_content
     else:
-        assert f"   [{levelname}] - {message}" in log_content
+        assert f"[{levelname} ] - {message}" in log_content

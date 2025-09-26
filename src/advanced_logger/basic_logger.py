@@ -66,6 +66,16 @@ class BasicLogger:
     #                              PRIVATE METHODS
     # ============================================================================
 
+    def _get_handler(self, handler_id: Union[str, Handler]) -> Handler:
+        if isinstance(handler_id, Handler):
+            return handler_id
+    
+        if isinstance(handler_id, str): 
+            if handler_id in self.__active_handlers:
+                return self.__active_handlers[handler_id]
+
+        return None
+    
     def _map_level(self, level : Union[str, int]) -> int:
         return get_level(level)
 
@@ -116,8 +126,7 @@ class BasicLogger:
 
     def set_logger_level(self, level: int|str) -> None:
         level = get_level(level)
-        
-        self.logger.setLevel( level )
+        self.__logger.setLevel(level)
 
     def init_term_handler(
         self,
@@ -167,6 +176,10 @@ class BasicLogger:
         self._remove_handler(handler_identifier)
 
     def set_handler_level(self, handler_identifier: Union[str, Handler], level: Union[str, int]) -> None:
+        if level == 'debug' or level == self.DEBUG:
+            self.set_logger_level(self.DEBUG)
+
+
         level = get_level(level)
         
         if isinstance(handler_identifier, Handler):
@@ -178,10 +191,6 @@ class BasicLogger:
                 
         else:
             raise TypeError("handler_identifier must be either a string (handler name) or a Handler object")
-
-        if self._map_level(level) == get_level('debug'):
-            self.__logger.setLevel( get_level('debug') )
-
 
     # ============================================================================
     #                               LOGS METHODS

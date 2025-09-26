@@ -12,7 +12,7 @@ from .utils import *
 from .basic_logger import BasicLogger
 from .formatters import ProcedureFormater
 from .levels import add_new_level, get_level_number
-from .filter import StepOnlyFilter
+from .filter import StepOnlyFilter, ExcludeProcedureFilter, ExcludeSubstepFilter
 
 datefmt = "%Y-%m-%d %H:%M:%S"
 
@@ -64,6 +64,11 @@ class AdvancedLogger(BasicLogger):
         self.__stepn    : int = 0
         # -- The substep one --------------------------------------- #
         self.__substepn : int = 0
+        # -- The subsubstep ---------------------------------------- #
+        self.__sub_substepn : int = 0
+
+        self.__exclude_procedure_filter = ExcludeProcedureFilter()
+        self.__exclude_substep_filter   = ExcludeSubstepFilter()
     
 
     def __enter__(self):
@@ -169,6 +174,7 @@ class AdvancedLogger(BasicLogger):
     def reset_steps(self) -> None:
         self.__stepn = 0
         self.__substepn = 0
+        self.__sub_substepn = 0
 
         self.__test_procedure: dict = {
             'test_id': "",
@@ -177,6 +183,34 @@ class AdvancedLogger(BasicLogger):
             'procedure_info': {}
         }
 
+    def supress_prcedure(self, handler: str | None = None):
+        if handler is None:
+            for _, act_handler in self.active_handlers.items():
+                act_handler.addFilter(self.__exclude_step_filter)
+        else:
+            self._get_handler(handler).addFilter(self.__exclude_procedure_filter)
+
+    def supress_substeps(self, handler: str | None = None):
+        if handler is None:
+            for _, act_handler in self.active_handlers.items():
+                act_handler.addFilter(self.__exclude_substep_filter)
+        else:
+            self._get_handler(handler).addFilter(self.__exclude_substep_filter)
+    
+    def enable_procedure_filter(self, handler: str | None = None):
+        if handler is None:
+            for _, act_handler in self.active_handlers.items():
+                act_handler.removeFilter(self.__exclude_step_filter)
+        else:
+            self._get_handler(handler).removeFilter(self.__exclude_procedure_filter)
+
+    def enable_substeps_filter(self, handler: str | None = None):
+        if handler is None:
+            for _, act_handler in self.active_handlers.items():
+                act_handler.removeFilter(self.__exclude_substep_filter)
+        else:
+            self._get_handler(handler).removeFilter(self.__exclude_substep_filter)
+    
 
     # ============================================================================
     #                             EXPORT METHODS
@@ -261,11 +295,16 @@ class AdvancedLogger(BasicLogger):
             'procedure_info': procedure_info
         })
 
-    def substep(self, *args, sep=' ', end='', enable=True, **kwargs):
-        self.__substepn += 1
-
+    def substep(self, *args, sep=' ', end='', enable=True, is_substep: bool = False, **kwargs):
         indent :str = " "*kwargs.get('indent', 0)
-        extra = {"step": f"{self.__stepn}.{self.__substepn}", "indent": indent}
+
+        if is_substep:
+            self.__sub_substepn += 1
+            extra = {"step": f"{self.__stepn}.{self.__substepn}.{self.__sub_substepn}", "indent": indent}
+        else:
+            self.__substepn += 1
+            self.__sub_substepn = 0
+            extra = {"step": f"{self.__stepn}.{self.__substepn}", "indent": indent}
 
         if enable and args: 
             msg = sep.join(str(a) for a in args) + end
@@ -278,9 +317,17 @@ class AdvancedLogger(BasicLogger):
 
         procedure_info = kwargs.get('procedure_info', {})
 
-        self.__test_procedure['steps'].append({
-            'id': f"{self.__stepn}.{self.__substepn}",
-            'parent': f"{self.__stepn}",
-            'description': sep.join(str(a) for a in args) + end,
-            'procedure_info': procedure_info
-        }) 
+        if is_substep:
+            self.__test_procedure['steps'].append({
+                'id': f"{self.__stepn}.{self.__substepn}.{self.__sub_substepn}",
+                'parent': f"{self.__stepn}.{self.__substepn}",
+                'description': sep.join(str(a) for a in args) + end,
+                'procedure_info': procedure_info
+            })   
+        else:
+            self.__test_procedure['steps'].append({
+                'id': f"{self.__stepn}.{self.__substepn}",
+                'parent': f"{self.__stepn}",
+                'description': sep.join(str(a) for a in args) + end,
+                'procedure_info': procedure_info
+            }) 

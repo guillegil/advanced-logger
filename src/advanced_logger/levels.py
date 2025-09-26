@@ -16,7 +16,7 @@ _LEVELS = {
     "warning"   : {"levelno": logging.WARNING,  "color": fg.YELLOW,       "name": "WARNING"   },
     "error"     : {"levelno": logging.ERROR,    "color": fg.RED,          "name": "ERROR"     },
     "critical"  : {"levelno": logging.CRITICAL, "color": fg.RED,          "name": "CRITICAL"  },
-    "step"      : {"levelno": 21,               "color": fg.WHITE,        "name": "STEP"      },
+    "step"      : {"levelno": 21,               "color": fg.MAGENTA,      "name": "STEP"      },
     "substep"   : {"levelno": 22,               "color": fg.light_gray,   "name": "SUBSTEP"   },
     "pass"      : {"levelno": 23,               "color": fg.GREEN,        "name": "PASS"      },
     "fail"      : {"levelno": 31,               "color": fg.RED,          "name": "FAIL"      },
